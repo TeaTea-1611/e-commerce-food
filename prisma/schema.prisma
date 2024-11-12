@@ -1,0 +1,133 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+generator dbml {
+  provider = "prisma-dbml-generator"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model User {
+  id       String    @id @default(cuid())
+  name     String
+  email    String    @unique
+  password String
+  address  String    @default("")
+  phone    String    @default("")
+  role     Role      @default(USER)
+  sessions Session[]
+  orders   Order[]
+
+  @@index([email])
+  @@map("users")
+}
+
+model Session {
+  id      String @id @default(cuid())
+  userId  String
+  token   String
+  expires Int
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, token])
+  @@map("sessions")
+}
+
+model Category {
+  id          String     @id @default(cuid())
+  name        String     @unique
+  description String     @default("")
+  foodItems   FoodItem[]
+
+  @@map("categories")
+}
+
+model FoodItem {
+  id            String   @id @default(cuid())
+  name          String
+  description   String   @default("")
+  price         Float
+  imageUrl      String   @default("")
+  cookingMethod String
+  taste         String[]
+  size          String
+  origin        String
+  usageType     String
+  targetUsers   String[]
+  quantity      Int      @default(1)
+  sold          Int      @default(0)
+
+  categoryId String
+  category   Category    @relation(fields: [categoryId], references: [id])
+  orderItems OrderItem[]
+
+  @@index([name])
+  @@map("food_items")
+}
+
+model Order {
+  id          String      @id @default(cuid())
+  userId      String
+  status      OrderStatus @default(PENDING)
+  appTransId  String      @unique
+  totalAmount Float
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  user        User        @relation(fields: [userId], references: [id])
+  orderItems  OrderItem[]
+
+  deliveryStatus DeliveryStatus @default(PENDING_DELIVERY)
+  paymentStatus  PaymentStatus  @default(PENDING_PAYMENT)
+  deliveredAt    DateTime?
+  paidAt         DateTime?
+
+  @@map("orders")
+}
+
+// Các enum mới để theo dõi trạng thái giao hàng và thanh toán
+enum DeliveryStatus {
+  PENDING_DELIVERY
+  IN_TRANSIT
+  DELIVERED
+}
+
+enum PaymentStatus {
+  PENDING_PAYMENT
+  PAID
+  FAILED
+}
+
+enum OrderStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+model OrderItem {
+  id         String   @id @default(cuid())
+  orderId    String
+  foodItemId String
+  quantity   Int      @default(1)
+  order      Order    @relation(fields: [orderId], references: [id])
+  foodItem   FoodItem @relation(fields: [foodItemId], references: [id])
+
+  @@map("order_items")
+}
+
+model Billboard {
+  id       String @id @default(cuid())
+  name     String @unique
+  imageUrl String
+
+  @@map("billboards")
+}
